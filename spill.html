@@ -1,0 +1,486 @@
+<!doctype html>
+<html>
+<head>
+  <title> PONG </title>
+  <meta charset="utf-8">
+  <link rel="shortcut icon" type="image/png" href="pictures/icon.png">
+  <style>
+  body {
+    background-color: black;
+  }
+  #mittCanvas {
+    background-color: black;
+    display: block;
+    margin:auto;
+  }
+
+  h1 {
+    position: relative;
+    font-size:550%;
+    font-family:calibri;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .innpakning {
+    width:70%;
+    margin:auto;
+}
+  #pauseKnapp {
+    position:relative;
+    left:76%;
+    margin-top:4%;
+    border-style:none;
+    background-color:;
+    height:50px;
+    transition:height 0.5s, left 0.5s;
+  }
+
+  #pauseKnapp:hover {
+    cursor: pointer;
+    height:70px;
+    left:73%;
+  }
+
+  #bruksanvisning {
+    border:#00aa0e dashed;
+    background-color: black;
+    color:#00aa0e;
+    font-weight:bold;
+    font-size:150%;
+    height:50px;
+    position:absolute;
+    top:88%;
+    left:28%;
+    width:20%;
+    transition: width 0.5s;
+  }
+
+  #bruksanvisning:hover {
+    cursor:pointer;
+    width:25%;
+  }
+
+  #sp1Innpakning, #sp2Innpakning {
+    position:absolute;
+    top:10%;
+    left:28%;
+    font-family:calibri;
+    font-size:200%;
+    color:#00aa0e;
+  }
+
+  #sp2Innpakning {
+    left:70%;
+  }
+
+  .pongTekst {
+    position:relative;
+    width:30%;
+    height:20%;
+    left:35%;
+  }
+
+  #omstartKnapp {
+    position:absolute;
+    left:62%;
+    top:87%;
+    width:3.7%;
+    transition: 0.5s;
+  }
+
+  #omstartKnapp:hover {
+    width:5%;
+    left:60%;
+    cursor:pointer;
+  }
+
+  </style>
+</head>
+<body>
+<div class="innpakning">
+<!-- <h1>2P PONG</h1> -->
+
+<img src="pictures/pongTekst.png" class="pongTekst">
+
+<!-- Inneholder poengene til spillerne -->
+<div id="sp1Innpakning">0</div>
+<div id="sp2Innpakning">0</div>
+
+
+<!-- Canvas hvor spillet foregår -->
+<canvas id="mittCanvas" width="600" height="400"></canvas>
+
+  <img src="pictures/pauseKnapp2.png" id="pauseKnapp">
+  <img src="pictures/omstart.png" id="omstartKnapp">
+
+
+<!-- Sender deg til bruksanvisningen -->
+  <a href="C:\Users\admin\Documents\IT\arbeidsmappe-henrikmw\pong\index.html">
+    <button id="bruksanvisning"> BRUKSANVISNING </button>
+  </a>
+
+</div>
+<script>
+
+var pause=false;
+
+var sp1Poeng=0;
+var sp2Poeng=0;
+
+console.log(pause);
+function spill () { //animasjonfunksjonen vi bruker
+
+  if(pause==false){
+
+
+  //tømmer canvas-elementet
+  ctx.clearRect (0, 0, canvas.width, canvas.height);
+
+
+  //midtlinje
+  ctx.setLineDash([20, 10]);/*dashes are 5px and spaces are 3px*/
+  ctx.beginPath();
+  ctx.moveTo(canvas.width/2,0);
+  ctx.lineTo(canvas.width/2, canvas.height);
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  //topp av 'banen'
+  ctx.setLineDash([10, 5]);/*dashes are 5px and spaces are 3px*/
+  ctx.beginPath();
+  ctx.moveTo(canvas.width,0);
+  ctx.lineTo(0, 0);
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  //bunn av 'banen'
+  ctx.setLineDash([10, 5]);/*dashes are 5px and spaces are 3px*/
+  ctx.beginPath();
+  ctx.moveTo(canvas.width, canvas.height);
+  ctx.lineTo(0, canvas.height);
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  //flytter og tegner opp de to spillerne
+  spiller1.flytt();
+  spiller1.tegn();
+  spiller2.flytt();
+  spiller2.tegn();
+
+  //flytter og tegner opp ballen
+  ball.flytt(spiller1, spiller2);
+  ball.tegn();
+
+  //gjentar funksjonen
+  requestAnimationFrame(spill);
+  } //if(!pause)
+}
+
+//requester AnimationFrame første gang
+requestAnimationFrame(spill);
+
+
+"use strict"
+
+//henter mittCanvas
+var canvas=document.querySelector("#mittCanvas");
+var ctx = canvas.getContext("2d");
+
+//lager en tom array som skal lagre taster som trykkes
+var taster = [];
+
+//sjekker keyup og keydown hendelser
+window.addEventListener("keydown", knappNedOpp);
+window.addEventListener("keyup", knappNedOpp);
+
+function knappNedOpp (e) {
+  //når en knapp holdes nede registreres den som true i arrayen taster
+  if(e.type === "keydown") {
+    taster[e.keyCode] = true;
+  } else if(e.type === "keyup") {
+    //tilsvarende slettes den (false) når den ikke lenger holdes nede
+    delete taster[e.keyCode];
+  }
+}
+
+//lager en klasse for spillerne
+class Spiller {
+  constructor(x, y, bredde, hoyde, fart, oppTast, nedTast, farge) {
+    this.x=x;
+    this.y=y;
+    this.bredde=bredde;
+    this.hoyde=hoyde;
+    this.fart=fart;
+    this.oppTast=oppTast;
+    this.nedTast=nedTast;
+    this.farge=farge;
+  }
+
+  //tegner opp spilleren
+  tegn () {
+    ctx.fillStyle=this.farge;
+    ctx.fillRect(this.x, this.y, this.bredde, this.hoyde);
+  }
+
+  //gjør at spilleren kan flytte seg
+  flytt() {
+    this.y += this.fart;
+
+    if(taster[this.oppTast] && this.y>0) {
+      this.y-=4;
+      this.fart=-4;
+    } else if(taster[this.nedTast] && this.y+this.hoyde<canvas.height) {
+      this.y+=4;
+      this.fart=4;
+    } else {
+      this.fart=0;
+    }
+  }
+}
+
+    //klasse for ballen
+    class Ball {
+      constructor(x, y, radius, xFart, yFart, fargeVenstre, fargeHoyre) {
+        this.x=x;
+        this.y=y;
+        this.xFart=xFart;
+        this.yFart=yFart;
+        this.fargeVenstre=fargeVenstre;
+        this.fargeHoyre=fargeHoyre;
+        this.radius=radius;
+      }
+
+    //tegner ballen
+      tegn() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 2*Math.PI, false);
+        if(this.x<canvas.width/2){
+          ctx.fillStyle = this.fargeVenstre;
+        } else {
+          ctx.fillStyle = this.fargeHoyre;
+        }
+        ctx.fill();
+      }
+
+
+    //sp1 og sp2 er de to spillerne
+      flytt(sp1, sp2) {
+        this.x+= this.xFart; //x posisjonen endres
+        this.y+= this.yFart; //y posisjonen endres
+        this.sp1=sp1;
+        this.sp2=sp2;
+        //flytter ballen
+
+        //lager en sound funksjon, som oppretter en 'usynlig' sound element i html dokumentet hver gang ballen spretter
+        function sound(src){
+          this.sound=document.createElement("audio");
+          this.sound.src=src;
+          this.sound.setAttribute("preload", "auto");
+          this.sound.setAttribute("controls", "none");
+          this.sound.style.display="none";
+          document.body.appendChild(this.sound);
+          this.play=function(){
+            this.sound.play();
+          }
+          this.stop=function(){
+            this.sound.pause();
+          }
+      }
+        //for å sjekke ballens posisjon, i tillegg til å danne en lydvariabel
+        var topp=this.y-10;
+        var bunn = this.y+10;
+        var venstre=this.x-10;
+        var hoyre=this.x+10;
+        var sprettLyd = new sound("lyd/bounce.mp3");
+
+        //treffer topp eller bunnvegg
+         if(topp<0 || bunn>canvas.height) {
+          this.yFart = -this.yFart;
+        }
+
+        //treffer spiller 1
+        if(venstre<sp1.x+sp1.bredde && hoyre>sp1.x+sp1.bredde && topp<sp1.y + sp1.hoyde && bunn>sp1.y){
+          //hvis ballen er lengre til venstre enn spiller1
+          //hvis ballens topp er lenger ned enn toppen til spiller1
+          //hvis ballens bunn er høyere enn bunnen til spiller1
+          this.xFart=-this.xFart;
+          sprettLyd.play();
+
+          //ballen blir fanget fordi den tilfredstiller alle kriteriene i en loop
+          //xFart endres om igjen og om igjen
+
+          //hvis sp1 ikke står stille
+          if(sp1.fart!==0) {
+            this.yFart = sp1.fart;
+            sprettLyd.play();
+          }
+      }
+
+
+      //treffer spiller 1 bunn
+      if(hoyre>sp1.x+sp1.bredde && venstre<sp1.x+sp1.bredde && topp<sp1.y+sp1.hoyde && bunn>sp1.y+sp1.hoyde) {
+        this.yFart=-this.yFart;
+        sprettLyd.play();
+      }
+
+      //treffer spiller 1 topp
+      if(hoyre>sp1.x+sp1.bredde && venstre<sp1.x+sp1.bredde && topp<sp1.y && bunn>sp1.y) {
+        this.yFart=-this.yFart;
+        sprettLyd.play();
+      }
+
+
+
+
+
+      //treffer spiller 2
+      if(venstre<sp2.x && hoyre>sp2.x && topp<sp2.y + sp2.hoyde && bunn>sp2.y){
+        //hvis ballen er lengre til venstre enn spiller1
+        //hvis ballens topp er lenger ned enn toppen til spiller1
+        //hvis ballens bunn er høyere enn bunnen til spiller1
+        this.xFart=-this.xFart;
+        sprettLyd.play();
+
+        //ballen blir fanget fordi den tilfredstiller alle kriteriene i en loop
+        //xFart endres om igjen og om igjen
+
+        //hvis sp2 ikke står stille
+        if(sp2.fart!==0) {
+          this.yFart = sp2.fart;
+          sprettLyd.play();
+        }
+    }
+
+
+    //treffer spiller 2 bunn
+    if(hoyre>sp2.x+sp2.bredde && venstre<sp2.x+sp2.bredde && topp<sp2.y+sp2.hoyde && bunn>sp2.y+sp2.hoyde) {
+      this.yFart=-this.yFart;
+      sprettLyd.play();
+    }
+
+    //treffer spiller 2 topp
+    if(hoyre>sp2.x+sp2.bredde && venstre<sp2.x+sp2.bredde && topp<sp2.y && bunn>sp2.y) {
+      this.yFart=-this.yFart;
+      sprettLyd.play();
+    }
+
+
+var sp1InnpakningEl=document.querySelector("#sp1Innpakning");
+var sp2InnpakningEl=document.querySelector("#sp2Innpakning");
+
+var maalLyd = new sound("lyd/goal.mp3");
+
+//hvis ballen faller ut av banen
+//hvis sp2 får poeng
+    if(this.x < 0) {
+      if(sp2Poeng<4){ //så lenge spilleren ikke har nådd 5 poeng starter spillet på nytt
+        this.x=300;
+        this.y=200;
+        sp2Poeng++;
+        sp2InnpakningEl.innerHTML=sp2Poeng;
+        maalLyd.play();
+        console.log(sp2Poeng);
+      } else {
+        sp2Poeng++;
+        sp1InnpakningEl.innerHTML=sp1Poeng;
+        byttOm();
+        var vinnerTekst=document.createElement("div");
+        ctx.font = "250% Calibri";
+        ctx.fillText("SPILLER 2 VANT!", canvas.width/2-120, canvas.height/2);
+        ctx.font = "150% Calibri";
+        ctx.fillText("Trykk på space for å spille igjen!", 110, 250);
+      }
+    }
+    //hvis sp1 får poeng
+    if(this.x > canvas.width) {
+      if(sp1Poeng<4){
+        this.x=300;
+        this.y=200;
+        sp1Poeng++;
+        sp1InnpakningEl.innerHTML=sp1Poeng;
+        maalLyd.play();
+        console.log(sp1Poeng);
+      } else {
+        sp1Poeng++;
+        sp1InnpakningEl.innerHTML=sp1Poeng;
+        byttOm();
+        ctx.font = "250% Calibri";
+        ctx.fillText("SPILLER 1 VANT!", canvas.width/2-120, canvas.height/2);
+        ctx.font = "150% Calibri";
+        ctx.fillText("TRYKK PÅ 'SPACE' FOR Å SPILLE IGJEN!", 110, 250);
+        window.addEventListener("keydown", startPåNytt);
+        function startPåNytt(e) {
+          console.log(e.which);
+          if(e.which=="32") {
+            location.reload();
+          }
+        }
+      }
+    }
+
+
+  }
+}
+
+var omstartKnappEl = document.querySelector("#omstartKnapp");
+omstartKnappEl.addEventListener("click", startPaaNytt);
+//starter spillet på nytt
+  function startPaaNytt() {
+    location.reload();
+  }
+
+
+window.addEventListener("keydown", omstartFunksjon);
+//dersom 'keydown' har space-verdien
+function omstartFunksjon (e) {
+  console.log(e.which);
+  if(e.which=="32") {
+    startPaaNytt();
+  }
+}
+
+var pauseKnapp=document.querySelector("#pauseKnapp");
+pauseKnapp.value="ikkePause";
+
+pauseKnapp.addEventListener("click", byttOm);
+
+function byttOm (){
+    if(pause==false){
+      pause=true;
+      pauseKnapp.value="pause";
+      pauseKnapp.src="pictures/spillKnapp2.png";
+
+    } else if(pause==true){
+      pause=false;
+      pauseKnapp.value="ikkePause";
+      pauseKnapp.src="pictures/pauseKnapp2.png";
+      requestAnimationFrame(spill);
+    }
+}
+
+//legger til muligheten til å pause spillet med p
+window.addEventListener("keydown", pauseKey);
+
+function pauseKey(e){
+  if(e.which==80 || e.keycode==80){ //spørs om browseren din støtter e.which eller e.keycode. Hvis den er 80(p){pause()}
+    byttOm();
+  }
+}
+
+
+
+var tilfeldigTall=Math.floor(Math.random()*10)+1;
+
+var spiller1 = new Spiller(50, 140, 5, 100, 0, 87, 83, "white");
+var spiller2 = new Spiller(530, 120, 5, 100, 0, 38, 40, "white");
+
+var ball = new Ball(300, 200, 10, 5, tilfeldigTall, "white", "white");
+
+</script>
+</body>
+</html>
